@@ -1,0 +1,6 @@
+@KeySolution.Api_HostAddress = http://localhost:5160
+
+GET {{KeySolution.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
