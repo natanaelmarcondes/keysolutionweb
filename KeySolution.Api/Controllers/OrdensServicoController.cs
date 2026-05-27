@@ -2,6 +2,7 @@ using KeySolution.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using SqlKata;
 using SqlKata.Execution;
+using System.Text.RegularExpressions;
 
 namespace KeySolution.Api.Controllers
 {
@@ -10,13 +11,83 @@ namespace KeySolution.Api.Controllers
     public sealed class OrdensServicoController : ControllerBase
     {
         private readonly QueryFactory _db;
+        private readonly IConfiguration _config;
 
         private const int DefaultPageSize = 18;
         private const int MaxPageSize = 100;
 
-        public OrdensServicoController(QueryFactory db)
+        public OrdensServicoController(QueryFactory db, IConfiguration config)
         {
             _db = db;
+            _config = config;
+        }
+
+        private string? ServiceDeskBaseUrl
+        {
+            get
+            {
+                string? url = _config["ServiceDesk:BaseUrl"];
+
+                if (string.IsNullOrWhiteSpace(url))
+                    return null;
+
+                return url.TrimEnd('/');
+            }
+        }
+
+        private string? FixInlineImageUrls(string? html)
+        {
+            if (string.IsNullOrWhiteSpace(html))
+                return html;
+
+            string? baseUrl = ServiceDeskBaseUrl;
+
+            if (string.IsNullOrWhiteSpace(baseUrl))
+                return html;
+
+            string result = html;
+
+            // Já é absoluto: mantém como está.
+            // src="http://..." ou src="https://..."
+            // src="data:..." também fica intacto porque os padrões abaixo não pegam.
+
+            // Caso 1:
+            // src="/adventnet/ServiceDesk/inlineimages/WorkOrder/..."
+            result = Regex.Replace(
+                result,
+                "(?<attr>(?:src|href))=(\"|')(?<url>/adventnet/ServiceDesk/inlineimages/[^\"']+)(\"|')",
+                m => $"{m.Groups["attr"].Value}=\"{baseUrl}{m.Groups["url"].Value}\"",
+                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant
+            );
+
+            // Caso 2:
+            // src="/inlineimages/WorkOrder/..."
+            result = Regex.Replace(
+                result,
+                "(?<attr>(?:src|href))=(\"|')(?<url>/inlineimages/[^\"']+)(\"|')",
+                m => $"{m.Groups["attr"].Value}=\"{baseUrl}/adventnet/ServiceDesk{m.Groups["url"].Value}\"",
+                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant
+            );
+
+            // Caso 3:
+            // src="adventnet/ServiceDesk/inlineimages/WorkOrder/..."
+            result = Regex.Replace(
+                result,
+                "(?<attr>(?:src|href))=(\"|')(?<url>adventnet/ServiceDesk/inlineimages/[^\"']+)(\"|')",
+                m => $"{m.Groups["attr"].Value}=\"{baseUrl}/{m.Groups["url"].Value}\"",
+                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant
+            );
+
+            // Caso 4:
+            // src="inlineimages/WorkOrder/..."
+            result = Regex.Replace(
+                result,
+                "(?<attr>(?:src|href))=(\"|')(?<url>inlineimages/[^\"']+)(\"|')",
+                m => $"{m.Groups["attr"].Value}=\"{baseUrl}/adventnet/ServiceDesk/{m.Groups["url"].Value}\"",
+                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant
+            );
+
+            return result;
         }
 
         [HttpGet]
@@ -35,7 +106,6 @@ namespace KeySolution.Api.Controllers
             request.FiltroCampo = string.IsNullOrWhiteSpace(request.FiltroCampo) ? null : request.FiltroCampo.Trim();
             request.FiltroUsuarioNome = string.IsNullOrWhiteSpace(request.FiltroUsuarioNome) ? null : request.FiltroUsuarioNome.Trim();
 
-            // Se o usuário digitar apenas números na pesquisa textual, interpreta como número da O.S.
             if (!request.Numero.HasValue &&
                 !string.IsNullOrWhiteSpace(request.Texto) &&
                 long.TryParse(request.Texto, out long numeroPelaPesquisa))
@@ -44,7 +114,6 @@ namespace KeySolution.Api.Controllers
                 request.Texto = null;
             }
 
-            // Ao pesquisar por número, ignora os demais filtros.
             if (request.Numero.HasValue)
             {
                 request.Texto = null;
@@ -62,7 +131,6 @@ namespace KeySolution.Api.Controllers
                 .LeftJoin("aaauser as ao", "ao.USER_ID", "ws.OWNERID")
                 .LeftJoin("statusdefinition as st", "st.STATUSID", "ws.STATUSID");
 
-            // Status que devem ficar fora da listagem padrão.
             string[] defaultExcludedStatusNames =
             {
                 "Closed",
@@ -235,6 +303,156 @@ namespace KeySolution.Api.Controllers
             }
 
             return null;
+        }
+
+        [HttpGet("status")]
+        public IActionResult ListarStatus()
+        {
+            List<StatusOrdemServicoDto> status = _db.Query("statusdefinition")
+                .Where("ISDELETED", 0)
+                .OrderBy("STATUSNAME")
+                .Select(
+                    "STATUSID as StatusId",
+                    "STATUSNAME as StatusName"
+                )
+                .Get<StatusOrdemServicoDto>()
+                .ToList();
+
+            return Ok(status);
+        }
+
+        [HttpGet("{id:long}")]
+        public IActionResult ObterPorId(long id)
+        {
+            if (id <= 0)
+                return BadRequest(new { mensagem = "Código da O.S. inválido." });
+
+            OrdemServicoDto? os = _db.Query("workorder as w")
+                .LeftJoin("workordertodescription as d", "d.WORKORDERID", "w.WORKORDERID")
+                .LeftJoin("workorderstates as ws", "ws.WORKORDERID", "w.WORKORDERID")
+                .LeftJoin("statusdefinition as st", "st.STATUSID", "ws.STATUSID")
+                .Where("w.WORKORDERID", id)
+                .Select(
+                    "w.WORKORDERID as Workorderid",
+                    "w.REQUESTERID as Requesterid",
+                    "w.CREATEDBYID as Createdbyid",
+                    "w.CREATEDTIME as Createdtime",
+                    "w.TITLE as Title",
+                    "w.DESCRIPTION as Description",
+                    "d.FULLDESCRIPTION as Fulldescription",
+                    "ws.OWNERID as Ownerid",
+                    "ws.STATUSID as Statusid",
+                    "st.STATUSNAME as Statusname"
+                )
+                .FirstOrDefault<OrdemServicoDto>();
+
+            if (os == null || os.Workorderid <= 0)
+                return NotFound(new { mensagem = "O.S. não encontrada." });
+
+            os.Fulldescription = FixInlineImageUrls(os.Fulldescription);
+
+            if (os.Ownerid == 0)
+            {
+                long? owner = _db.Query("workorderstates")
+                    .Where("WORKORDERID", os.Workorderid)
+                    .Select("OWNERID")
+                    .FirstOrDefault<long?>();
+
+                if (owner.HasValue)
+                    os.Ownerid = owner.Value;
+            }
+
+            string? aberturaNome = null;
+
+            if (os.Createdbyid.HasValue && os.Createdbyid.Value > 0)
+            {
+                aberturaNome = _db.Query("aaauser")
+                    .Where("USER_ID", os.Createdbyid.Value)
+                    .Select("FIRST_NAME")
+                    .FirstOrDefault<string>();
+            }
+
+            string? clienteNome = null;
+
+            if (os.Requesterid > 0)
+            {
+                clienteNome = _db.Query("aaauser")
+                    .Where("USER_ID", os.Requesterid)
+                    .Select("FIRST_NAME")
+                    .FirstOrDefault<string>();
+            }
+
+            long respUserId = os.Ownerid != 0 ? os.Ownerid : os.Requesterid;
+
+            string? responsavelNome = _db.Query("aaauser")
+                .Where("USER_ID", respUserId)
+                .Select("FIRST_NAME")
+                .FirstOrDefault<string>();
+
+            List<string> setores = _db.Query("queue_technician as qt")
+                .Join("queuedefinition as qd", "qt.QUEUEID", "qd.QUEUEID")
+                .Join("aaauser as au", "qt.TECHNICIANID", "au.USER_ID")
+                .Where("au.USER_ID", respUserId)
+                .Select("qd.QUEUENAME")
+                .OrderBy("qd.QUEUENAME")
+                .Get<string>()
+                .ToList();
+
+            string? responsavelSetor = setores.Count == 0
+                ? null
+                : string.Join(" / ", setores.Distinct());
+
+            long? responsavelQueueId = _db.Query("queue_technician as qt")
+                .Where("qt.TECHNICIANID", respUserId)
+                .Select("qt.QUEUEID")
+                .OrderBy("qt.QUEUEID")
+                .FirstOrDefault<long?>();
+
+            string? resolucaoAtual = _db.Query("workorderhistory as h")
+                .Join("workorderhistorydiff as d", "d.HISTORYID", "h.HISTORYID")
+                .Where("h.WORKORDERID", id)
+                .Where("d.COLUMNNAME", "RESOLUTION")
+                .OrderByDesc("h.OPERATIONTIME")
+                .Select("d.CURRENT_VALUE")
+                .Limit(1)
+                .FirstOrDefault<string>();
+
+            resolucaoAtual = FixInlineImageUrls(resolucaoAtual);
+
+            List<OrdemServicoHistoricoDto> historicos = _db.Query("workorderhistory as h")
+                .LeftJoin("aaauser as au", "au.USER_ID", "h.OPERATIONOWNERID")
+                .Where("h.WORKORDERID", id)
+                .OrderByDesc("h.OPERATIONTIME")
+                .Select(
+                    "h.HISTORYID as Historyid",
+                    "h.WORKORDERID as Workorderid",
+                    "h.OPERATIONOWNERID as Operationownerid",
+                    "h.OPERATIONTIME as Operationtime",
+                    "h.DESCRIPTION as Description",
+                    "h.OPERATION as Operation",
+                    "au.FIRST_NAME as UsuarioNome"
+                )
+                .Get<OrdemServicoHistoricoDto>()
+                .ToList();
+
+            foreach (OrdemServicoHistoricoDto h in historicos)
+            {
+                h.Description = FixInlineImageUrls(h.Description);
+            }
+
+            OrdemServicoDetalheDto detalhe = new()
+            {
+                OrdemServico = os,
+                AberturaNome = aberturaNome,
+                ClienteNome = clienteNome,
+                ResponsavelNome = responsavelNome,
+                ResponsavelSetor = responsavelSetor,
+                ResponsavelQueueId = responsavelQueueId,
+                ResolucaoAtual = resolucaoAtual,
+                Historicos = historicos
+            };
+
+            return Ok(detalhe);
         }
     }
 }

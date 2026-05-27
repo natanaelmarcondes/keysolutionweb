@@ -75,8 +75,8 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseHttpsRedirection();
-
+//app.UseHttpsRedirection();
+app.UseStaticFiles();
 app.UseCors("AngularCors");
 
 app.UseAuthorization();
