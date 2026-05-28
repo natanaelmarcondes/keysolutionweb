@@ -1,0 +1,458 @@
+﻿using KeySolution.Api.Models;
+using Microsoft.AspNetCore.Mvc;
+using SqlKata;
+using SqlKata.Execution;
+using System.Text.RegularExpressions;
+
+namespace KeySolution.Api.Controllers
+{
+    [ApiController]
+    [Route("api/ordens-servico")]
+    public sealed class OrdensServicoController : ControllerBase
+    {
+        private readonly QueryFactory _db;
+        private readonly IConfiguration _config;
+
+        private const int DefaultPageSize = 18;
+        private const int MaxPageSize = 100;
+
+        public OrdensServicoController(QueryFactory db, IConfiguration config)
+        {
+            _db = db;
+            _config = config;
+        }
+
+        private string? ServiceDeskBaseUrl
+        {
+            get
+            {
+                string? url = _config["ServiceDesk:BaseUrl"];
+
+                if (string.IsNullOrWhiteSpace(url))
+                    return null;
+
+                return url.TrimEnd('/');
+            }
+        }
+
+        private string? FixInlineImageUrls(string? html)
+        {
+            if (string.IsNullOrWhiteSpace(html))
+                return html;
+
+            string? baseUrl = ServiceDeskBaseUrl;
+
+            if (string.IsNullOrWhiteSpace(baseUrl))
+                return html;
+
+            string result = html;
+
+            // Já é absoluto: mantém como está.
+            // src="http://..." ou src="https://..."
+            // src="data:..." também fica intacto porque os padrões abaixo não pegam.
+
+            // Caso 1:
+            // src="/adventnet/ServiceDesk/inlineimages/WorkOrder/..."
+            result = Regex.Replace(
+                result,
+                "(?<attr>(?:src|href))=(\"|')(?<url>/adventnet/ServiceDesk/inlineimages/[^\"']+)(\"|')",
+                m => $"{m.Groups["attr"].Value}=\"{baseUrl}{m.Groups["url"].Value}\"",
+                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant
+            );
+
+            // Caso 2:
+            // src="/inlineimages/WorkOrder/..."
+            result = Regex.Replace(
+                result,
+                "(?<attr>(?:src|href))=(\"|')(?<url>/inlineimages/[^\"']+)(\"|')",
+                m => $"{m.Groups["attr"].Value}=\"{baseUrl}/adventnet/ServiceDesk{m.Groups["url"].Value}\"",
+                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant
+            );
+
+            // Caso 3:
+            // src="adventnet/ServiceDesk/inlineimages/WorkOrder/..."
+            result = Regex.Replace(
+                result,
+                "(?<attr>(?:src|href))=(\"|')(?<url>adventnet/ServiceDesk/inlineimages/[^\"']+)(\"|')",
+                m => $"{m.Groups["attr"].Value}=\"{baseUrl}/{m.Groups["url"].Value}\"",
+                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant
+            );
+
+            // Caso 4:
+            // src="inlineimages/WorkOrder/..."
+            result = Regex.Replace(
+                result,
+                "(?<attr>(?:src|href))=(\"|')(?<url>inlineimages/[^\"']+)(\"|')",
+                m => $"{m.Groups["attr"].Value}=\"{baseUrl}/adventnet/ServiceDesk/{m.Groups["url"].Value}\"",
+                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant
+            );
+
+            return result;
+        }
+
+        [HttpGet]
+        public IActionResult Listar([FromQuery] OrdemServicoListarRequest request)
+        {
+            if (request.Page < 1)
+                request.Page = 1;
+
+            if (request.PageSize <= 0)
+                request.PageSize = DefaultPageSize;
+
+            if (request.PageSize > MaxPageSize)
+                request.PageSize = MaxPageSize;
+
+            request.Texto = string.IsNullOrWhiteSpace(request.Texto) ? null : request.Texto.Trim();
+            request.FiltroCampo = string.IsNullOrWhiteSpace(request.FiltroCampo) ? null : request.FiltroCampo.Trim();
+            request.FiltroUsuarioNome = string.IsNullOrWhiteSpace(request.FiltroUsuarioNome) ? null : request.FiltroUsuarioNome.Trim();
+
+            if (!request.Numero.HasValue &&
+                !string.IsNullOrWhiteSpace(request.Texto) &&
+                long.TryParse(request.Texto, out long numeroPelaPesquisa))
+            {
+                request.Numero = numeroPelaPesquisa;
+                request.Texto = null;
+            }
+
+            if (request.Numero.HasValue)
+            {
+                request.Texto = null;
+                request.FiltroCampo = null;
+                request.FiltroUsuarioId = null;
+                request.FiltroUsuarioNome = null;
+                request.StatusId = null;
+                request.StatusIds = null;
+            }
+
+            Query baseQuery = _db.Query("workorder as os")
+                .Join("aaauser as ua", "ua.USER_ID", "os.CREATEDBYID")
+                .Join("aaauser as ar", "ar.USER_ID", "os.REQUESTERID")
+                .LeftJoin("workorderstates as ws", "ws.WORKORDERID", "os.WORKORDERID")
+                .LeftJoin("aaauser as ao", "ao.USER_ID", "ws.OWNERID")
+                .LeftJoin("statusdefinition as st", "st.STATUSID", "ws.STATUSID");
+
+            string[] defaultExcludedStatusNames =
+            {
+                "Closed",
+                "Resolved",
+                "Descontinuado",
+                "Caiu no esquecimento"
+            };
+
+            bool hasExplicitStatusFilter =
+                !string.IsNullOrWhiteSpace(request.StatusIds) ||
+                request.StatusId.HasValue;
+
+            if (!request.Numero.HasValue && !hasExplicitStatusFilter)
+            {
+                string[] excludedUpper = defaultExcludedStatusNames
+                    .Select(s => s.Trim().ToUpperInvariant())
+                    .ToArray();
+
+                baseQuery = baseQuery.Where(q =>
+                    q.WhereNull("st.STATUSNAME")
+                     .OrWhereRaw(
+                        "UPPER(TRIM(st.STATUSNAME)) NOT IN (?, ?, ?, ?)",
+                        excludedUpper[0],
+                        excludedUpper[1],
+                        excludedUpper[2],
+                        excludedUpper[3])
+                );
+            }
+
+            if (request.Numero.HasValue)
+            {
+                baseQuery = baseQuery.Where("os.WORKORDERID", request.Numero.Value);
+            }
+
+            if (!request.Numero.HasValue && !string.IsNullOrWhiteSpace(request.Texto))
+            {
+                baseQuery = baseQuery.WhereRaw(
+                    "(os.TITLE LIKE ? OR os.DESCRIPTION LIKE ?)",
+                    $"%{request.Texto}%",
+                    $"%{request.Texto}%"
+                );
+            }
+
+            List<long> selectedStatusIds = ObterStatusIds(request);
+
+            if (!request.Numero.HasValue && selectedStatusIds.Count > 0)
+            {
+                baseQuery = baseQuery.WhereIn("ws.STATUSID", selectedStatusIds);
+            }
+
+            List<long>? filtroUsuarioIds = ObterFiltroUsuarioIds(request);
+
+            if (!request.Numero.HasValue &&
+                !string.IsNullOrWhiteSpace(request.FiltroCampo) &&
+                filtroUsuarioIds != null &&
+                filtroUsuarioIds.Count > 0)
+            {
+                switch (request.FiltroCampo)
+                {
+                    case "cliente":
+                        baseQuery = baseQuery.WhereIn("os.REQUESTERID", filtroUsuarioIds);
+                        break;
+
+                    case "aberta":
+                        baseQuery = baseQuery.WhereIn("os.CREATEDBYID", filtroUsuarioIds);
+                        break;
+
+                    case "responsavel":
+                        baseQuery = baseQuery.WhereIn("ws.OWNERID", filtroUsuarioIds);
+                        break;
+
+                    case "criado":
+                        baseQuery = baseQuery
+                            .Join("workorderhistory as wc", j => j
+                                .On("wc.WORKORDERID", "os.WORKORDERID")
+                                .Where("wc.OPERATION", "CREATE"))
+                            .WhereIn("wc.OPERATIONOWNERID", filtroUsuarioIds);
+                        break;
+                }
+            }
+
+            long totalItems = baseQuery.Clone()
+                .SelectRaw("COUNT(DISTINCT os.WORKORDERID)")
+                .FirstOrDefault<long>();
+
+            List<OrdemServicoListItemDto> items = baseQuery.Clone()
+                .Select(
+                    "os.WORKORDERID as OsCodigo",
+                    "os.CREATEDTIME as OsData",
+                    "os.TITLE as OsTitulo",
+                    "ar.FIRST_NAME as Cliente",
+                    "ua.FIRST_NAME as UsuarioAbertura",
+                    "st.STATUSNAME as Status",
+                    "ws.ISREAD as IsRead"
+                )
+                .SelectRaw("COALESCE(ao.FIRST_NAME, ar.FIRST_NAME) as UsuarioResponsavel")
+                .Distinct()
+                .OrderByDesc("os.WORKORDERID")
+                .ForPage(request.Page, request.PageSize)
+                .Get<OrdemServicoListItemDto>()
+                .ToList();
+
+            PagedResultDto<OrdemServicoListItemDto> result = new()
+            {
+                Items = items,
+                Page = request.Page,
+                PageSize = request.PageSize,
+                TotalItems = totalItems
+            };
+
+            return Ok(result);
+        }
+
+        private List<long> ObterStatusIds(OrdemServicoListarRequest request)
+        {
+            List<long> selectedStatusIds = new();
+
+            if (!string.IsNullOrWhiteSpace(request.StatusIds))
+            {
+                string[] partes = request.StatusIds.Split(
+                    new[] { ',', ';', ' ' },
+                    StringSplitOptions.RemoveEmptyEntries
+                );
+
+                foreach (string parte in partes)
+                {
+                    if (long.TryParse(parte.Trim(), out long statusId) && statusId > 0)
+                        selectedStatusIds.Add(statusId);
+                }
+            }
+            else if (request.StatusId.HasValue && request.StatusId.Value > 0)
+            {
+                selectedStatusIds.Add(request.StatusId.Value);
+            }
+
+            return selectedStatusIds
+                .Distinct()
+                .ToList();
+        }
+
+        private List<long>? ObterFiltroUsuarioIds(OrdemServicoListarRequest request)
+        {
+            if (request.FiltroUsuarioId.HasValue && request.FiltroUsuarioId.Value > 0)
+            {
+                return new List<long>
+                {
+                    request.FiltroUsuarioId.Value
+                };
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.FiltroUsuarioNome))
+            {
+                List<long> ids = _db.Query("aaauser")
+                    .WhereLike("FIRST_NAME", $"%{request.FiltroUsuarioNome}%")
+                    .OrderBy("FIRST_NAME")
+                    .Select("USER_ID")
+                    .Limit(200)
+                    .Get<long>()
+                    .ToList();
+
+                if (ids.Count == 0)
+                {
+                    return new List<long>
+                    {
+                        -1
+                    };
+                }
+
+                return ids;
+            }
+
+            return null;
+        }
+
+        [HttpGet("status")]
+        public IActionResult ListarStatus()
+        {
+            List<StatusOrdemServicoDto> status = _db.Query("statusdefinition")
+                .Where("ISDELETED", 0)
+                .OrderBy("STATUSNAME")
+                .Select(
+                    "STATUSID as StatusId",
+                    "STATUSNAME as StatusName"
+                )
+                .Get<StatusOrdemServicoDto>()
+                .ToList();
+
+            return Ok(status);
+        }
+
+        [HttpGet("{id:long}")]
+        public IActionResult ObterPorId(long id)
+        {
+            if (id <= 0)
+                return BadRequest(new { mensagem = "Código da O.S. inválido." });
+
+            OrdemServicoDto? os = _db.Query("workorder as w")
+                .LeftJoin("workordertodescription as d", "d.WORKORDERID", "w.WORKORDERID")
+                .LeftJoin("workorderstates as ws", "ws.WORKORDERID", "w.WORKORDERID")
+                .LeftJoin("statusdefinition as st", "st.STATUSID", "ws.STATUSID")
+                .Where("w.WORKORDERID", id)
+                .Select(
+                    "w.WORKORDERID as Workorderid",
+                    "w.REQUESTERID as Requesterid",
+                    "w.CREATEDBYID as Createdbyid",
+                    "w.CREATEDTIME as Createdtime",
+                    "w.TITLE as Title",
+                    "w.DESCRIPTION as Description",
+                    "d.FULLDESCRIPTION as Fulldescription",
+                    "ws.OWNERID as Ownerid",
+                    "ws.STATUSID as Statusid",
+                    "st.STATUSNAME as Statusname"
+                )
+                .FirstOrDefault<OrdemServicoDto>();
+
+            if (os == null || os.Workorderid <= 0)
+                return NotFound(new { mensagem = "O.S. não encontrada." });
+
+            os.Fulldescription = FixInlineImageUrls(os.Fulldescription);
+
+            if (os.Ownerid == 0)
+            {
+                long? owner = _db.Query("workorderstates")
+                    .Where("WORKORDERID", os.Workorderid)
+                    .Select("OWNERID")
+                    .FirstOrDefault<long?>();
+
+                if (owner.HasValue)
+                    os.Ownerid = owner.Value;
+            }
+
+            string? aberturaNome = null;
+
+            if (os.Createdbyid.HasValue && os.Createdbyid.Value > 0)
+            {
+                aberturaNome = _db.Query("aaauser")
+                    .Where("USER_ID", os.Createdbyid.Value)
+                    .Select("FIRST_NAME")
+                    .FirstOrDefault<string>();
+            }
+
+            string? clienteNome = null;
+
+            if (os.Requesterid > 0)
+            {
+                clienteNome = _db.Query("aaauser")
+                    .Where("USER_ID", os.Requesterid)
+                    .Select("FIRST_NAME")
+                    .FirstOrDefault<string>();
+            }
+
+            long respUserId = os.Ownerid != 0 ? os.Ownerid : os.Requesterid;
+
+            string? responsavelNome = _db.Query("aaauser")
+                .Where("USER_ID", respUserId)
+                .Select("FIRST_NAME")
+                .FirstOrDefault<string>();
+
+            List<string> setores = _db.Query("queue_technician as qt")
+                .Join("queuedefinition as qd", "qt.QUEUEID", "qd.QUEUEID")
+                .Join("aaauser as au", "qt.TECHNICIANID", "au.USER_ID")
+                .Where("au.USER_ID", respUserId)
+                .Select("qd.QUEUENAME")
+                .OrderBy("qd.QUEUENAME")
+                .Get<string>()
+                .ToList();
+
+            string? responsavelSetor = setores.Count == 0
+                ? null
+                : string.Join(" / ", setores.Distinct());
+
+            long? responsavelQueueId = _db.Query("queue_technician as qt")
+                .Where("qt.TECHNICIANID", respUserId)
+                .Select("qt.QUEUEID")
+                .OrderBy("qt.QUEUEID")
+                .FirstOrDefault<long?>();
+
+            string? resolucaoAtual = _db.Query("workorderhistory as h")
+                .Join("workorderhistorydiff as d", "d.HISTORYID", "h.HISTORYID")
+                .Where("h.WORKORDERID", id)
+                .Where("d.COLUMNNAME", "RESOLUTION")
+                .OrderByDesc("h.OPERATIONTIME")
+                .Select("d.CURRENT_VALUE")
+                .Limit(1)
+                .FirstOrDefault<string>();
+
+            resolucaoAtual = FixInlineImageUrls(resolucaoAtual);
+
+            List<OrdemServicoHistoricoDto> historicos = _db.Query("workorderhistory as h")
+                .LeftJoin("aaauser as au", "au.USER_ID", "h.OPERATIONOWNERID")
+                .Where("h.WORKORDERID", id)
+                .OrderByDesc("h.OPERATIONTIME")
+                .Select(
+                    "h.HISTORYID as Historyid",
+                    "h.WORKORDERID as Workorderid",
+                    "h.OPERATIONOWNERID as Operationownerid",
+                    "h.OPERATIONTIME as Operationtime",
+                    "h.DESCRIPTION as Description",
+                    "h.OPERATION as Operation",
+                    "au.FIRST_NAME as UsuarioNome"
+                )
+                .Get<OrdemServicoHistoricoDto>()
+                .ToList();
+
+            foreach (OrdemServicoHistoricoDto h in historicos)
+            {
+                h.Description = FixInlineImageUrls(h.Description);
+            }
+
+            OrdemServicoDetalheDto detalhe = new()
+            {
+                OrdemServico = os,
+                AberturaNome = aberturaNome,
+                ClienteNome = clienteNome,
+                ResponsavelNome = responsavelNome,
+                ResponsavelSetor = responsavelSetor,
+                ResponsavelQueueId = responsavelQueueId,
+                ResolucaoAtual = resolucaoAtual,
+                Historicos = historicos
+            };
+
+            return Ok(detalhe);
+        }
+    }
+}

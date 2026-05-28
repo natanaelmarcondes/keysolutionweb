@@ -1,4 +1,4 @@
-﻿namespace KeySolution.Models.DTO.Usuarios
+﻿namespace KeySolution.Api.Models.DTO.Usuarios
 {
     public class UsuarioListaDTO
     {

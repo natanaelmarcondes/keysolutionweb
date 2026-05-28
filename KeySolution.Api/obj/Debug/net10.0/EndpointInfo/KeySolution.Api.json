@@ -60,6 +60,147 @@
         }
       }
     },
+    "/api/filas": {
+      "get": {
+        "tags": [
+          "Filas"
+        ],
+        "parameters": [
+          {
+            "name": "tipoBusca",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "termo",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Filas"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FilaSalvarDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FilaSalvarDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/FilaSalvarDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/filas/{id}": {
+      "get": {
+        "tags": [
+          "Filas"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Filas"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FilaSalvarDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FilaSalvarDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/FilaSalvarDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Filas"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/ordens-servico": {
       "get": {
         "tags": [
@@ -214,10 +355,100 @@
             "description": "OK"
           }
         }
+      },
+      "post": {
+        "tags": [
+          "Usuarios"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UsuarioCriarDTO"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UsuarioCriarDTO"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UsuarioCriarDTO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
       }
     },
     "/api/usuarios/{id}": {
       "get": {
+        "tags": [
+          "Usuarios"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Usuarios"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UsuarioSalvarDTO"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UsuarioSalvarDTO"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UsuarioSalvarDTO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "delete": {
         "tags": [
           "Usuarios"
         ],
@@ -254,6 +485,42 @@
   },
   "components": {
     "schemas": {
+      "FilaSalvarDto": {
+        "type": "object",
+        "properties": {
+          "queueid": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "queuename": {
+            "type": "string",
+            "nullable": true
+          },
+          "queuedescription": {
+            "type": "string",
+            "nullable": true
+          },
+          "siteid": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "sendername": {
+            "type": "string",
+            "nullable": true
+          },
+          "replyaddress": {
+            "type": "string",
+            "nullable": true
+          },
+          "ciid": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "LoginRequestDTO": {
         "type": "object",
         "properties": {
@@ -270,12 +537,85 @@
           }
         },
         "additionalProperties": false
+      },
+      "UsuarioCriarDTO": {
+        "type": "object",
+        "properties": {
+          "useR_ID": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "usr_nome": {
+            "type": "string",
+            "nullable": true
+          },
+          "usr_email": {
+            "type": "string",
+            "nullable": true
+          },
+          "usr_nivel": {
+            "type": "string",
+            "nullable": true
+          },
+          "set_codigo": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "queueid": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "senha": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "UsuarioSalvarDTO": {
+        "type": "object",
+        "properties": {
+          "useR_ID": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "usr_nome": {
+            "type": "string",
+            "nullable": true
+          },
+          "usr_email": {
+            "type": "string",
+            "nullable": true
+          },
+          "usr_nivel": {
+            "type": "string",
+            "nullable": true
+          },
+          "set_codigo": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "queueid": {
+            "type": "integer",
+            "format": "int64",
+            "nullable": true
+          },
+          "senha": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
       }
     }
   },
   "tags": [
     {
       "name": "ApiAuth"
+    },
+    {
+      "name": "Filas"
     },
     {
       "name": "OrdensServico"

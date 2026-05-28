@@ -4,10 +4,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SqlKata.Execution;
 using System.Security.Claims;
-using KeySolution.Models.DTO;
-using KeySolution.Models.DTO.Auth;
+using KeySolution.Api.Models.DTO;
+using KeySolution.Api.Models.DTO.Auth;
 
-namespace KeySolution.Controllers
+namespace KeySolution.Api.Controllers.Auth
 {
     [ApiController]
     [Route("api/auth")]

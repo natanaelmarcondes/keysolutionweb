@@ -1,4 +1,4 @@
-﻿namespace KeySolution.Models.DTO
+﻿namespace KeySolution.Api.Models.DTO
 {
     public class PagedResponseDTO<T>
     {

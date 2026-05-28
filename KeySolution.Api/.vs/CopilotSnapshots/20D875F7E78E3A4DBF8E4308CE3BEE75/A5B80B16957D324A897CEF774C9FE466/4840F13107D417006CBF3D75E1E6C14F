@@ -1,0 +1,8 @@
+﻿namespace KeySolution.Api.Models.DTO.Setores
+{
+    public class SetorDTO
+    {
+        public int set_codigo { get; set; }
+        public string set_nome { get; set; } = "";
+    }
+}

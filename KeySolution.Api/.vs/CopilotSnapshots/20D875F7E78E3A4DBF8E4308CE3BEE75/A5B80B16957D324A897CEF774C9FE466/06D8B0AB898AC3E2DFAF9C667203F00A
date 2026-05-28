@@ -1,0 +1,186 @@
+﻿using KeySolution.Api.Models.DTO.Setores;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using SqlKata.Execution;
+
+namespace KeySolution.Api.Controllers.Setores
+{
+    [Authorize]
+    [ApiController]
+    [Route("api/setores")]
+    public class SetoresController : ControllerBase
+    {
+        private readonly QueryFactory _db;
+
+        public SetoresController(QueryFactory db)
+        {
+            _db = db;
+        }
+
+        [HttpGet]
+        public IActionResult Listar([FromQuery] string? texto)
+        {
+            var query = _db.Query("setores");
+
+            if (!string.IsNullOrWhiteSpace(texto))
+            {
+                string filtro = $"%{texto.Trim()}%";
+                query = query.WhereLike("set_nome", filtro);
+            }
+
+            var setores = query
+                .Select("set_codigo", "set_nome")
+                .OrderBy("set_nome")
+                .Get<SetorDTO>()
+                .ToList();
+
+            return Ok(setores);
+        }
+
+        [HttpGet("{id:int}")]
+        public IActionResult ObterPorId(int id)
+        {
+            if (id <= 0)
+                return BadRequest(new { mensagem = "Código do setor inválido." });
+
+            var setor = _db.Query("setores")
+                .Where("set_codigo", id)
+                .Select("set_codigo", "set_nome")
+                .FirstOrDefault<SetorDTO>();
+
+            if (setor == null)
+                return NotFound(new { mensagem = "Setor não encontrado." });
+
+            return Ok(setor);
+        }
+
+        [HttpPost]
+        public IActionResult Criar([FromBody] SetorSalvarDTO model)
+        {
+            string? validacao = Validar(model);
+
+            if (!string.IsNullOrWhiteSpace(validacao))
+                return BadRequest(new { mensagem = validacao });
+
+            // UPSERT: se set_codigo informado existir, atualiza; senão, cria com próximo id
+            int? idAtualizar = null;
+
+            if (model.set_codigo > 0)
+            {
+                bool existe = _db.Query("setores")
+                    .Where("set_codigo", model.set_codigo)
+                    .Exists();
+
+                if (existe)
+                    idAtualizar = model.set_codigo;
+            }
+
+            bool nomeExisteEmOutro = _db.Query("setores")
+                .WhereRaw("LOWER(TRIM(set_nome)) = ?", NormalizarNome(model.set_nome))
+                .When(idAtualizar.HasValue, q => q.Where("set_codigo", "!=", idAtualizar!.Value))
+                .Exists();
+
+            if (nomeExisteEmOutro)
+                return BadRequest(new { mensagem = "Já existe um setor com este nome." });
+
+            int idFinal;
+
+            if (idAtualizar.HasValue)
+            {
+                idFinal = idAtualizar.Value;
+
+                _db.Query("setores")
+                    .Where("set_codigo", idFinal)
+                    .Update(new
+                    {
+                        set_nome = model.set_nome.Trim()
+                    });
+            }
+            else
+            {
+                idFinal = _db.Query("setores")
+                    .SelectRaw("COALESCE(MAX(set_codigo), 0) + 1")
+                    .FirstOrDefault<int>();
+
+                _db.Query("setores").Insert(new
+                {
+                    set_codigo = idFinal,
+                    set_nome = model.set_nome.Trim()
+                });
+            }
+
+            var setorFinal = _db.Query("setores")
+                .Where("set_codigo", idFinal)
+                .Select("set_codigo", "set_nome")
+                .FirstOrDefault<SetorDTO>();
+
+            return Ok(new
+            {
+                mensagem = idAtualizar.HasValue ? "Setor atualizado com sucesso." : "Setor cadastrado com sucesso.",
+                setor = setorFinal
+            });
+        }
+
+        [HttpPut("{id:int}")]
+        public IActionResult Atualizar(int id, [FromBody] SetorSalvarDTO model)
+        {
+            if (id <= 0)
+                return BadRequest(new { mensagem = "Código do setor inválido." });
+
+            string? validacao = Validar(model);
+
+            if (!string.IsNullOrWhiteSpace(validacao))
+                return BadRequest(new { mensagem = validacao });
+
+            bool existe = _db.Query("setores")
+                .Where("set_codigo", id)
+                .Exists();
+
+            if (!existe)
+                return NotFound(new { mensagem = "Setor não encontrado." });
+
+            bool nomeExisteEmOutro = _db.Query("setores")
+                .WhereRaw("LOWER(TRIM(set_nome)) = ?", NormalizarNome(model.set_nome))
+                .Where("set_codigo", "!=", id)
+                .Exists();
+
+            if (nomeExisteEmOutro)
+                return BadRequest(new { mensagem = "Já existe um setor com este nome." });
+
+            _db.Query("setores")
+                .Where("set_codigo", id)
+                .Update(new
+                {
+                    set_nome = model.set_nome.Trim()
+                });
+
+            var setorAtualizado = _db.Query("setores")
+                .Where("set_codigo", id)
+                .Select("set_codigo", "set_nome")
+                .FirstOrDefault<SetorDTO>();
+
+            return Ok(new
+            {
+                mensagem = "Setor atualizado com sucesso.",
+                setor = setorAtualizado
+            });
+        }
+
+        private static string? Validar(SetorSalvarDTO? model)
+        {
+            if (model == null)
+                return "Dados do setor não informados.";
+
+            if (string.IsNullOrWhiteSpace(model.set_nome))
+                return "Informe o nome do setor.";
+
+            if (model.set_nome.Trim().Length > 250)
+                return "O nome do setor não pode ultrapassar 250 caracteres.";
+
+            return null;
+        }
+
+        private static string NormalizarNome(string nome)
+            => nome.Trim().ToLowerInvariant();
+    }
+}

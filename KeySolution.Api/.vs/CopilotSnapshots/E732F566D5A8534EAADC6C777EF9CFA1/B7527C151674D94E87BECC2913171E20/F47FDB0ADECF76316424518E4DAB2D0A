@@ -1,0 +1,113 @@
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using SqlKata.Execution;
+using KeySolution.Models.DTO;
+using KeySolution.Models.DTO.Usuarios;
+
+namespace KeySolution.Controllers
+{
+    [ApiController]
+    [Route("api/usuarios")]
+    [Authorize]
+    public class UsuariosController : ControllerBase
+    {
+        private readonly QueryFactory _db;
+
+        public UsuariosController(QueryFactory db)
+        {
+            _db = db;
+        }
+
+        [HttpGet]
+        public IActionResult Listar(
+            [FromQuery] string? texto,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 18)
+        {
+            if (page <= 0)
+                page = 1;
+
+            if (pageSize <= 0)
+                pageSize = 18;
+
+            if (pageSize > 100)
+                pageSize = 100;
+
+            var queryBase = _db.Query("usuarios as us")
+                .LeftJoin("queue_technician as qt", "us.USER_ID", "qt.TECHNICIANID")
+                .LeftJoin("queuedefinition as qdQt", "qt.QUEUEID", "qdQt.QUEUEID")
+                .LeftJoin("queuedefinition as qdUs", "us.QUEUEID", "qdUs.QUEUEID");
+
+            if (!string.IsNullOrWhiteSpace(texto))
+            {
+                string filtro = $"%{texto.Trim()}%";
+
+                queryBase.Where(q =>
+                    q.WhereLike("us.usr_nome", filtro)
+                     .OrWhereLike("us.usr_email", filtro)
+                     .OrWhereLike("us.usr_nivel", filtro)
+                     .OrWhereLike("qdQt.QUEUENAME", filtro)
+                     .OrWhereLike("qdUs.QUEUENAME", filtro)
+                );
+            }
+
+            int totalItems = queryBase.Clone().Count<int>();
+
+            var usuarios = queryBase
+                .Clone()
+                .Select(
+                    "us.usr_codigo",
+                    "us.USER_ID",
+                    "us.usr_nome",
+                    "us.usr_email",
+                    "us.usr_nivel",
+                    "us.set_codigo"
+                )
+                .SelectRaw("COALESCE(qt.QUEUEID, us.QUEUEID) as QUEUEID")
+                .SelectRaw("COALESCE(qdQt.QUEUENAME, qdUs.QUEUENAME) as setor")
+                .OrderBy("us.usr_nome")
+                .ForPage(page, pageSize)
+                .Get<UsuarioListaDTO>()
+                .ToList();
+
+            int totalPages = totalItems == 0
+                ? 0
+                : (int)Math.Ceiling(totalItems / (double)pageSize);
+
+            return Ok(new PagedResponseDTO<UsuarioListaDTO>
+            {
+                Items = usuarios,
+                Page = page,
+                PageSize = pageSize,
+                TotalItems = totalItems,
+                TotalPages = totalPages
+            });
+        }
+
+        [HttpGet("{id:int}")]
+        public IActionResult ObterPorId(int id)
+        {
+            var usuario = _db.Query("usuarios as us")
+                .LeftJoin("queue_technician as qt", "us.USER_ID", "qt.TECHNICIANID")
+                .LeftJoin("queuedefinition as qdQt", "qt.QUEUEID", "qdQt.QUEUEID")
+                .LeftJoin("queuedefinition as qdUs", "us.QUEUEID", "qdUs.QUEUEID")
+                .Where("us.usr_codigo", id)
+                .Select(
+                    "us.usr_codigo",
+                    "us.USER_ID",
+                    "us.usr_nome",
+                    "us.usr_email",
+                    "us.usr_nivel",
+                    "us.set_codigo"
+                )
+                .SelectRaw("COALESCE(qt.QUEUEID, us.QUEUEID) as QUEUEID")
+                .SelectRaw("COALESCE(qdQt.QUEUENAME, qdUs.QUEUENAME) as setor")
+                .FirstOrDefault<UsuarioListaDTO>();
+
+            if (usuario == null)
+                return NotFound(new { mensagem = "Usuário não encontrado." });
+
+            return Ok(usuario);
+        }
+    }
+}

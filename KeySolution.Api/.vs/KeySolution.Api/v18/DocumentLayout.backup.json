@@ -3,16 +3,16 @@
   "WorkspaceRootPath": "H:\\KeySolutionAngular\\KeySolution.Api\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{8375FB81-BAA3-D56F-60FF-3166C095F2CC}|KeySolution.Api.csproj|h:\\keysolutionangular\\keysolution.api\\models\\dto\\usuarios\\usuariosalvardto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8375FB81-BAA3-D56F-60FF-3166C095F2CC}|KeySolution.Api.csproj|solutionrelative:models\\dto\\usuarios\\usuariosalvardto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{8375FB81-BAA3-D56F-60FF-3166C095F2CC}|KeySolution.Api.csproj|h:\\keysolutionangular\\keysolution.api\\models\\fila.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8375FB81-BAA3-D56F-60FF-3166C095F2CC}|KeySolution.Api.csproj|solutionrelative:models\\fila.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{8375FB81-BAA3-D56F-60FF-3166C095F2CC}|KeySolution.Api.csproj|h:\\keysolutionangular\\keysolution.api\\models\\dto\\usuarios\\usuariolistadto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{8375FB81-BAA3-D56F-60FF-3166C095F2CC}|KeySolution.Api.csproj|solutionrelative:models\\dto\\usuarios\\usuariolistadto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{8375FB81-BAA3-D56F-60FF-3166C095F2CC}|KeySolution.Api.csproj|h:\\keysolutionangular\\keysolution.api\\controllers\\usuarioscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8375FB81-BAA3-D56F-60FF-3166C095F2CC}|KeySolution.Api.csproj|solutionrelative:controllers\\usuarioscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{8375FB81-BAA3-D56F-60FF-3166C095F2CC}|KeySolution.Api.csproj|h:\\keysolutionangular\\keysolution.api\\controllers\\usuarioslookupcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8375FB81-BAA3-D56F-60FF-3166C095F2CC}|KeySolution.Api.csproj|solutionrelative:controllers\\usuarioslookupcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{8375FB81-BAA3-D56F-60FF-3166C095F2CC}|KeySolution.Api.csproj|h:\\keysolutionangular\\keysolution.api\\models\\dto\\pagedresponsedto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -27,8 +27,40 @@
       "RelativeMoniker": "D:0:0:{8375FB81-BAA3-D56F-60FF-3166C095F2CC}|KeySolution.Api.csproj|solutionrelative:program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{8375FB81-BAA3-D56F-60FF-3166C095F2CC}|KeySolution.Api.csproj|h:\\keysolutionangular\\keysolution.api\\controllers\\apiauthcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8375FB81-BAA3-D56F-60FF-3166C095F2CC}|KeySolution.Api.csproj|solutionrelative:controllers\\apiauthcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{8375FB81-BAA3-D56F-60FF-3166C095F2CC}|KeySolution.Api.csproj|h:\\keysolutionangular\\keysolution.api\\controllers\\auth\\apiauthcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8375FB81-BAA3-D56F-60FF-3166C095F2CC}|KeySolution.Api.csproj|solutionrelative:controllers\\auth\\apiauthcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{8375FB81-BAA3-D56F-60FF-3166C095F2CC}|KeySolution.Api.csproj|h:\\keysolutionangular\\keysolution.api\\controllers\\filas\\filascontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8375FB81-BAA3-D56F-60FF-3166C095F2CC}|KeySolution.Api.csproj|solutionrelative:controllers\\filas\\filascontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{8375FB81-BAA3-D56F-60FF-3166C095F2CC}|KeySolution.Api.csproj|h:\\keysolutionangular\\keysolution.api\\controllers\\ordensservico\\ordensservicocontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8375FB81-BAA3-D56F-60FF-3166C095F2CC}|KeySolution.Api.csproj|solutionrelative:controllers\\ordensservico\\ordensservicocontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{8375FB81-BAA3-D56F-60FF-3166C095F2CC}|KeySolution.Api.csproj|h:\\keysolutionangular\\keysolution.api\\controllers\\usuarios\\usuarioscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8375FB81-BAA3-D56F-60FF-3166C095F2CC}|KeySolution.Api.csproj|solutionrelative:controllers\\usuarios\\usuarioscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{8375FB81-BAA3-D56F-60FF-3166C095F2CC}|KeySolution.Api.csproj|h:\\keysolutionangular\\keysolution.api\\controllers\\usuarios\\usuarioslookupcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8375FB81-BAA3-D56F-60FF-3166C095F2CC}|KeySolution.Api.csproj|solutionrelative:controllers\\usuarios\\usuarioslookupcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{8375FB81-BAA3-D56F-60FF-3166C095F2CC}|KeySolution.Api.csproj|h:\\keysolutionangular\\keysolution.api\\models\\dto\\auth\\loginrequestdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8375FB81-BAA3-D56F-60FF-3166C095F2CC}|KeySolution.Api.csproj|solutionrelative:models\\dto\\auth\\loginrequestdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{8375FB81-BAA3-D56F-60FF-3166C095F2CC}|KeySolution.Api.csproj|h:\\keysolutionangular\\keysolution.api\\models\\dto\\auth\\loginresponsedto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8375FB81-BAA3-D56F-60FF-3166C095F2CC}|KeySolution.Api.csproj|solutionrelative:models\\dto\\auth\\loginresponsedto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{8375FB81-BAA3-D56F-60FF-3166C095F2CC}|KeySolution.Api.csproj|h:\\keysolutionangular\\keysolution.api\\models\\dto\\loginusuariodto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8375FB81-BAA3-D56F-60FF-3166C095F2CC}|KeySolution.Api.csproj|solutionrelative:models\\dto\\loginusuariodto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{8375FB81-BAA3-D56F-60FF-3166C095F2CC}|KeySolution.Api.csproj|h:\\keysolutionangular\\keysolution.api\\models\\dto\\usuarios\\usuariocriardto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8375FB81-BAA3-D56F-60FF-3166C095F2CC}|KeySolution.Api.csproj|solutionrelative:models\\dto\\usuarios\\usuariocriardto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -38,7 +70,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 6,
+          "SelectedChildIndex": 4,
           "Children": [
             {
               "$type": "Bookmark",
@@ -58,15 +90,145 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "UsuariosController.cs",
-              "DocumentMoniker": "H:\\KeySolutionAngular\\KeySolution.Api\\Controllers\\UsuariosController.cs",
-              "RelativeDocumentMoniker": "Controllers\\UsuariosController.cs",
-              "ToolTip": "H:\\KeySolutionAngular\\KeySolution.Api\\Controllers\\UsuariosController.cs",
-              "RelativeToolTip": "Controllers\\UsuariosController.cs",
-              "ViewState": "AgIAAE0AAAAAAAAAAADwv3AAAAABAAAAAAAAAA==",
+              "DocumentIndex": 0,
+              "Title": "UsuarioSalvarDTO.cs",
+              "DocumentMoniker": "H:\\KeySolutionAngular\\KeySolution.Api\\Models\\DTO\\Usuarios\\UsuarioSalvarDTO.cs",
+              "RelativeDocumentMoniker": "Models\\DTO\\Usuarios\\UsuarioSalvarDTO.cs",
+              "ToolTip": "H:\\KeySolutionAngular\\KeySolution.Api\\Models\\DTO\\Usuarios\\UsuarioSalvarDTO.cs",
+              "RelativeToolTip": "Models\\DTO\\Usuarios\\UsuarioSalvarDTO.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-05-28T14:44:06.298Z",
+              "WhenOpened": "2026-05-28T19:13:49.808Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 13,
+              "Title": "LoginUsuarioDTO.cs",
+              "DocumentMoniker": "H:\\KeySolutionAngular\\KeySolution.Api\\Models\\DTO\\LoginUsuarioDTO.cs",
+              "RelativeDocumentMoniker": "Models\\DTO\\LoginUsuarioDTO.cs",
+              "ToolTip": "H:\\KeySolutionAngular\\KeySolution.Api\\Models\\DTO\\LoginUsuarioDTO.cs",
+              "RelativeToolTip": "Models\\DTO\\LoginUsuarioDTO.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAABBwAEAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-28T17:33:48.177Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 12,
+              "Title": "LoginResponseDTO.cs",
+              "DocumentMoniker": "H:\\KeySolutionAngular\\KeySolution.Api\\Models\\DTO\\Auth\\LoginResponseDTO.cs",
+              "RelativeDocumentMoniker": "Models\\DTO\\Auth\\LoginResponseDTO.cs",
+              "ToolTip": "H:\\KeySolutionAngular\\KeySolution.Api\\Models\\DTO\\Auth\\LoginResponseDTO.cs",
+              "RelativeToolTip": "Models\\DTO\\Auth\\LoginResponseDTO.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAABBwAEAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-28T17:33:43.317Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 11,
+              "Title": "LoginRequestDTO.cs",
+              "DocumentMoniker": "H:\\KeySolutionAngular\\KeySolution.Api\\Models\\DTO\\Auth\\LoginRequestDTO.cs",
+              "RelativeDocumentMoniker": "Models\\DTO\\Auth\\LoginRequestDTO.cs",
+              "ToolTip": "H:\\KeySolutionAngular\\KeySolution.Api\\Models\\DTO\\Auth\\LoginRequestDTO.cs",
+              "RelativeToolTip": "Models\\DTO\\Auth\\LoginRequestDTO.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAABBwAEAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-28T17:33:38.119Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "Fila.cs",
+              "DocumentMoniker": "H:\\KeySolutionAngular\\KeySolution.Api\\Models\\Fila.cs",
+              "RelativeDocumentMoniker": "Models\\Fila.cs",
+              "ToolTip": "H:\\KeySolutionAngular\\KeySolution.Api\\Models\\Fila.cs",
+              "RelativeToolTip": "Models\\Fila.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAAAvAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-28T15:44:28.297Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 10,
+              "Title": "UsuariosLookupController.cs",
+              "DocumentMoniker": "H:\\KeySolutionAngular\\KeySolution.Api\\Controllers\\Usuarios\\UsuariosLookupController.cs",
+              "RelativeDocumentMoniker": "Controllers\\Usuarios\\UsuariosLookupController.cs",
+              "ToolTip": "H:\\KeySolutionAngular\\KeySolution.Api\\Controllers\\Usuarios\\UsuariosLookupController.cs",
+              "RelativeToolTip": "Controllers\\Usuarios\\UsuariosLookupController.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAACIAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-28T17:32:30.374Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 9,
+              "Title": "UsuariosController.cs",
+              "DocumentMoniker": "H:\\KeySolutionAngular\\KeySolution.Api\\Controllers\\Usuarios\\UsuariosController.cs",
+              "RelativeDocumentMoniker": "Controllers\\Usuarios\\UsuariosController.cs",
+              "ToolTip": "H:\\KeySolutionAngular\\KeySolution.Api\\Controllers\\Usuarios\\UsuariosController.cs",
+              "RelativeToolTip": "Controllers\\Usuarios\\UsuariosController.cs",
+              "ViewState": "AgIAAJYAAAAAAAAAAEBVwPYBAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-28T17:32:24.503Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
+              "Title": "OrdensServicoController.cs",
+              "DocumentMoniker": "H:\\KeySolutionAngular\\KeySolution.Api\\Controllers\\OrdensServico\\OrdensServicoController.cs",
+              "RelativeDocumentMoniker": "Controllers\\OrdensServico\\OrdensServicoController.cs",
+              "ToolTip": "H:\\KeySolutionAngular\\KeySolution.Api\\Controllers\\OrdensServico\\OrdensServicoController.cs",
+              "RelativeToolTip": "Controllers\\OrdensServico\\OrdensServicoController.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAMYBAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-28T17:32:09.649Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "FilasController.cs",
+              "DocumentMoniker": "H:\\KeySolutionAngular\\KeySolution.Api\\Controllers\\Filas\\FilasController.cs",
+              "RelativeDocumentMoniker": "Controllers\\Filas\\FilasController.cs",
+              "ToolTip": "H:\\KeySolutionAngular\\KeySolution.Api\\Controllers\\Filas\\FilasController.cs",
+              "RelativeToolTip": "Controllers\\Filas\\FilasController.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAABBwE4BAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-28T17:31:32.801Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "ApiAuthController.cs",
+              "DocumentMoniker": "H:\\KeySolutionAngular\\KeySolution.Api\\Controllers\\Auth\\ApiAuthController.cs",
+              "RelativeDocumentMoniker": "Controllers\\Auth\\ApiAuthController.cs",
+              "ToolTip": "H:\\KeySolutionAngular\\KeySolution.Api\\Controllers\\Auth\\ApiAuthController.cs",
+              "RelativeToolTip": "Controllers\\Auth\\ApiAuthController.cs",
+              "ViewState": "AgIAAAYAAAAAAAAAAIBJwLwAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-28T17:31:05.304Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 14,
+              "Title": "UsuarioCriarDTO.cs",
+              "DocumentMoniker": "H:\\KeySolutionAngular\\KeySolution.Api\\Models\\DTO\\Usuarios\\UsuarioCriarDTO.cs",
+              "RelativeDocumentMoniker": "Models\\DTO\\Usuarios\\UsuarioCriarDTO.cs",
+              "ToolTip": "H:\\KeySolutionAngular\\KeySolution.Api\\Models\\DTO\\Usuarios\\UsuarioCriarDTO.cs",
+              "RelativeToolTip": "Models\\DTO\\Usuarios\\UsuarioCriarDTO.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABMAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-28T17:38:51.608Z",
               "EditorCaption": ""
             },
             {
@@ -77,35 +239,22 @@
               "RelativeDocumentMoniker": "Models\\DTO\\PagedResponseDTO.cs",
               "ToolTip": "H:\\KeySolutionAngular\\KeySolution.Api\\Models\\DTO\\PagedResponseDTO.cs",
               "RelativeToolTip": "Models\\DTO\\PagedResponseDTO.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAABBwAwAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-05-28T14:43:36.625Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 2,
               "Title": "UsuarioListaDTO.cs",
               "DocumentMoniker": "H:\\KeySolutionAngular\\KeySolution.Api\\Models\\DTO\\Usuarios\\UsuarioListaDTO.cs",
               "RelativeDocumentMoniker": "Models\\DTO\\Usuarios\\UsuarioListaDTO.cs",
               "ToolTip": "H:\\KeySolutionAngular\\KeySolution.Api\\Models\\DTO\\Usuarios\\UsuarioListaDTO.cs",
               "RelativeToolTip": "Models\\DTO\\Usuarios\\UsuarioListaDTO.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAAzAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAAyAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-05-28T14:42:26.797Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "UsuariosLookupController.cs",
-              "DocumentMoniker": "H:\\KeySolutionAngular\\KeySolution.Api\\Controllers\\UsuariosLookupController.cs",
-              "RelativeDocumentMoniker": "Controllers\\UsuariosLookupController.cs",
-              "ToolTip": "H:\\KeySolutionAngular\\KeySolution.Api\\Controllers\\UsuariosLookupController.cs",
-              "RelativeToolTip": "Controllers\\UsuariosLookupController.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABEAAAAAAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-05-28T14:13:54.436Z",
               "EditorCaption": ""
             },
             {
@@ -118,21 +267,7 @@
               "RelativeToolTip": "appsettings.json",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABUAAAAFAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2026-05-28T13:43:36.98Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 6,
-              "Title": "ApiAuthController.cs",
-              "DocumentMoniker": "H:\\KeySolutionAngular\\KeySolution.Api\\Controllers\\ApiAuthController.cs",
-              "RelativeDocumentMoniker": "Controllers\\ApiAuthController.cs",
-              "ToolTip": "H:\\KeySolutionAngular\\KeySolution.Api\\Controllers\\ApiAuthController.cs",
-              "RelativeToolTip": "Controllers\\ApiAuthController.cs",
-              "ViewState": "AgIAAGMAAAAAAAAAAAAiwHkAAAAMAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-05-28T13:12:27.115Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-05-28T13:43:36.98Z"
             },
             {
               "$type": "Document",
@@ -144,8 +279,7 @@
               "RelativeToolTip": "Program.cs",
               "ViewState": "AgIAAIYAAAAAAAAAAAAAwHgAAAAmAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-05-28T13:10:13.84Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-05-28T13:10:13.84Z"
             }
           ]
         },

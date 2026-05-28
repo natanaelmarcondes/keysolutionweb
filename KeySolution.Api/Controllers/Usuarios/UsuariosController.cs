@@ -1,0 +1,502 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using SqlKata.Execution;
+using KeySolution.Api.Models.DTO;
+using KeySolution.Api.Models.DTO.Usuarios;
+using System.Net.Mail;
+
+namespace KeySolution.Api.Controllers.Usuarios
+{
+    [ApiController]
+    [Route("api/usuarios")]
+    [Authorize]
+    public class UsuariosController : ControllerBase
+    {
+        private readonly QueryFactory _db;
+
+        public UsuariosController(QueryFactory db)
+        {
+            _db = db;
+        }
+
+        [HttpGet]
+        public IActionResult Listar(
+            [FromQuery] string? texto,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 18)
+        {
+            if (page <= 0)
+                page = 1;
+
+            if (pageSize <= 0)
+                pageSize = 18;
+
+            if (pageSize > 100)
+                pageSize = 100;
+
+            var queryBase = _db.Query("usuarios as us")
+                .LeftJoin("queue_technician as qt", "us.USER_ID", "qt.TECHNICIANID")
+                .LeftJoin("queuedefinition as qdQt", "qt.QUEUEID", "qdQt.QUEUEID")
+                .LeftJoin("queuedefinition as qdUs", "us.QUEUEID", "qdUs.QUEUEID");
+
+            if (!string.IsNullOrWhiteSpace(texto))
+            {
+                string filtro = $"%{texto.Trim()}%";
+
+                queryBase.Where(q =>
+                    q.WhereLike("us.usr_nome", filtro)
+                     .OrWhereLike("us.usr_email", filtro)
+                     .OrWhereLike("us.usr_nivel", filtro)
+                     .OrWhereLike("qdQt.QUEUENAME", filtro)
+                     .OrWhereLike("qdUs.QUEUENAME", filtro)
+                );
+            }
+
+            int totalItems = queryBase.Clone().Count<int>();
+
+            var usuarios = queryBase
+                .Clone()
+                .Select(
+                    "us.usr_codigo",
+                    "us.USER_ID",
+                    "us.usr_nome",
+                    "us.usr_email",
+                    "us.usr_nivel",
+                    "us.set_codigo"
+                )
+                .SelectRaw("COALESCE(qt.QUEUEID, us.QUEUEID) as QUEUEID")
+                .SelectRaw("COALESCE(qdQt.QUEUENAME, qdUs.QUEUENAME) as setor")
+                .OrderBy("us.usr_nome")
+                .ForPage(page, pageSize)
+                .Get<UsuarioListaDTO>()
+                .ToList();
+
+            int totalPages = totalItems == 0
+                ? 0
+                : (int)Math.Ceiling(totalItems / (double)pageSize);
+
+            return Ok(new PagedResponseDTO<UsuarioListaDTO>
+            {
+                Items = usuarios,
+                Page = page,
+                PageSize = pageSize,
+                TotalItems = totalItems,
+                TotalPages = totalPages
+            });
+        }
+
+        [HttpGet("{id:int}")]
+        public IActionResult ObterPorId(int id)
+        {
+            var usuario = _db.Query("usuarios as us")
+                .LeftJoin("queue_technician as qt", "us.USER_ID", "qt.TECHNICIANID")
+                .LeftJoin("queuedefinition as qdQt", "qt.QUEUEID", "qdQt.QUEUEID")
+                .LeftJoin("queuedefinition as qdUs", "us.QUEUEID", "qdUs.QUEUEID")
+                .Where("us.usr_codigo", id)
+                .Select(
+                    "us.usr_codigo",
+                    "us.USER_ID",
+                    "us.usr_nome",
+                    "us.usr_email",
+                    "us.usr_nivel",
+                    "us.set_codigo"
+                )
+                .SelectRaw("COALESCE(qt.QUEUEID, us.QUEUEID) as QUEUEID")
+                .SelectRaw("COALESCE(qdQt.QUEUENAME, qdUs.QUEUENAME) as setor")
+                .FirstOrDefault<UsuarioListaDTO>();
+
+            if (usuario == null)
+                return NotFound(new { mensagem = "Usuário não encontrado." });
+
+            return Ok(usuario);
+        }
+
+        [HttpPost]
+        public IActionResult Criar([FromBody] UsuarioCriarDTO model)
+        {
+            string? validacao = ValidarCriacao(model);
+
+            if (!string.IsNullOrWhiteSpace(validacao))
+                return BadRequest(new { mensagem = validacao });
+
+            string emailNorm = NormalizarEmail(model.usr_email);
+
+            // UPSERT: se já existir por USER_ID ou email, atualiza ao invés de retornar erro
+            var existentePorUserId = _db.Query("usuarios")
+                .Where("USER_ID", model.USER_ID)
+                .Select("usr_codigo", "USER_ID")
+                .FirstOrDefault<dynamic>();
+
+            var existentePorEmail = _db.Query("usuarios")
+                .WhereRaw("LOWER(TRIM(usr_email)) = ?", emailNorm)
+                .Select("usr_codigo", "USER_ID")
+                .FirstOrDefault<dynamic>();
+
+            int? usrCodigoExistente = null;
+            long? userIdExistente = null;
+
+            if (existentePorUserId != null)
+            {
+                usrCodigoExistente = (int)existentePorUserId.usr_codigo;
+                userIdExistente = Convert.ToInt64(existentePorUserId.USER_ID);
+            }
+
+            if (existentePorEmail != null)
+            {
+                int codEmail = (int)existentePorEmail.usr_codigo;
+                long uidEmail = Convert.ToInt64(existentePorEmail.USER_ID);
+
+                if (usrCodigoExistente.HasValue && usrCodigoExistente.Value != codEmail)
+                    return BadRequest(new { mensagem = "Conflito: email pertence a outro usuário." });
+
+                usrCodigoExistente = codEmail;
+                userIdExistente = uidEmail;
+            }
+
+            if (model.QUEUEID.HasValue)
+            {
+                bool filaExiste = _db.Query("queuedefinition")
+                    .Where("QUEUEID", model.QUEUEID.Value)
+                    .Exists();
+
+                if (!filaExiste)
+                    return BadRequest(new { mensagem = "Fila (QUEUEID) informada não existe." });
+            }
+
+            string senhaHash = BCrypt.Net.BCrypt.HashPassword(model.Senha);
+
+            int usrCodigoFinal;
+
+            if (usrCodigoExistente.HasValue)
+            {
+                usrCodigoFinal = usrCodigoExistente.Value;
+
+                _db.Query("usuarios")
+                    .Where("usr_codigo", usrCodigoFinal)
+                    .Update(new
+                    {
+                        USER_ID = model.USER_ID,
+                        usr_nome = model.usr_nome.Trim(),
+                        usr_email = emailNorm,
+                        usr_nivel = model.usr_nivel.Trim(),
+                        set_codigo = model.set_codigo,
+                        usr_senha_hash = senhaHash,
+                        QUEUEID = model.QUEUEID
+                    });
+
+                // se mudou USER_ID, atualiza vínculos existentes e depois garante vínculo na fila informada
+                if (userIdExistente.HasValue)
+                    AtualizarVinculoFila(userIdExistente.Value, model.USER_ID, model.QUEUEID);
+                else
+                    AtualizarVinculoFila(model.USER_ID, model.USER_ID, model.QUEUEID);
+            }
+            else
+            {
+                int nextId = _db.Query("usuarios")
+                    .SelectRaw("COALESCE(MAX(usr_codigo), 0) + 1")
+                    .FirstOrDefault<int>();
+
+                usrCodigoFinal = nextId;
+
+                _db.Query("usuarios").Insert(new
+                {
+                    usr_codigo = nextId,
+                    USER_ID = model.USER_ID,
+                    usr_nome = model.usr_nome.Trim(),
+                    usr_email = emailNorm,
+                    usr_nivel = model.usr_nivel.Trim(),
+                    set_codigo = model.set_codigo,
+                    usr_senha_hash = senhaHash,
+                    QUEUEID = model.QUEUEID
+                });
+
+                AtualizarVinculoFila(model.USER_ID, model.USER_ID, model.QUEUEID);
+            }
+
+            var usuarioCriado = _db.Query("usuarios as us")
+                .LeftJoin("queue_technician as qt", "us.USER_ID", "qt.TECHNICIANID")
+                .LeftJoin("queuedefinition as qdQt", "qt.QUEUEID", "qdQt.QUEUEID")
+                .LeftJoin("queuedefinition as qdUs", "us.QUEUEID", "qdUs.QUEUEID")
+                .Where("us.usr_codigo", usrCodigoFinal)
+                .Select(
+                    "us.usr_codigo",
+                    "us.USER_ID",
+                    "us.usr_nome",
+                    "us.usr_email",
+                    "us.usr_nivel",
+                    "us.set_codigo"
+                )
+                .SelectRaw("COALESCE(qt.QUEUEID, us.QUEUEID) as QUEUEID")
+                .SelectRaw("COALESCE(qdQt.QUEUENAME, qdUs.QUEUENAME) as setor")
+                .FirstOrDefault<UsuarioListaDTO>();
+
+            return Ok(new
+            {
+                mensagem = usrCodigoExistente.HasValue ? "Usuário atualizado com sucesso." : "Usuário cadastrado com sucesso.",
+                usuario = usuarioCriado
+            });
+        }
+
+        [HttpPut("{id:int}")]
+        public IActionResult Atualizar(int id, [FromBody] UsuarioSalvarDTO model)
+        {
+            if (id <= 0)
+                return BadRequest(new { mensagem = "Código do usuário inválido." });
+
+            string? validacao = ValidarSalvar(model, exigirSenha: false);
+
+            if (!string.IsNullOrWhiteSpace(validacao))
+                return BadRequest(new { mensagem = validacao });
+
+            var usuarioAtual = _db.Query("usuarios")
+                .Where("usr_codigo", id)
+                .Select("usr_codigo", "USER_ID", "usr_email")
+                .FirstOrDefault<dynamic>();
+
+            if (usuarioAtual == null)
+                return NotFound(new { mensagem = "Usuário não encontrado." });
+
+            long userIdAtual;
+
+            try
+            {
+                userIdAtual = (long)usuarioAtual.USER_ID;
+            }
+            catch
+            {
+                userIdAtual = Convert.ToInt64(usuarioAtual.USER_ID);
+            }
+
+            string emailNorm = NormalizarEmail(model.usr_email);
+
+            bool emailEmOutro = _db.Query("usuarios")
+                .WhereRaw("LOWER(TRIM(usr_email)) = ?", emailNorm)
+                .Where("usr_codigo", "!=", id)
+                .Exists();
+
+            if (emailEmOutro)
+                return BadRequest(new { mensagem = "Já existe um usuário com este email." });
+
+            bool userIdEmOutro = _db.Query("usuarios")
+                .Where("USER_ID", model.USER_ID)
+                .Where("usr_codigo", "!=", id)
+                .Exists();
+
+            if (userIdEmOutro)
+                return BadRequest(new { mensagem = "Já existe um usuário com este USER_ID." });
+
+            if (model.QUEUEID.HasValue)
+            {
+                bool filaExiste = _db.Query("queuedefinition")
+                    .Where("QUEUEID", model.QUEUEID.Value)
+                    .Exists();
+
+                if (!filaExiste)
+                    return BadRequest(new { mensagem = "Fila (QUEUEID) informada não existe." });
+            }
+
+            object updateObj;
+
+            if (!string.IsNullOrWhiteSpace(model.Senha))
+            {
+                string senhaHash = BCrypt.Net.BCrypt.HashPassword(model.Senha.Trim());
+                updateObj = new
+                {
+                    USER_ID = model.USER_ID,
+                    usr_nome = model.usr_nome.Trim(),
+                    usr_email = emailNorm,
+                    usr_nivel = model.usr_nivel.Trim(),
+                    set_codigo = model.set_codigo,
+                    usr_senha_hash = senhaHash,
+                    QUEUEID = model.QUEUEID
+                };
+            }
+            else
+            {
+                updateObj = new
+                {
+                    USER_ID = model.USER_ID,
+                    usr_nome = model.usr_nome.Trim(),
+                    usr_email = emailNorm,
+                    usr_nivel = model.usr_nivel.Trim(),
+                    set_codigo = model.set_codigo,
+                    QUEUEID = model.QUEUEID
+                };
+            }
+
+            _db.Query("usuarios")
+                .Where("usr_codigo", id)
+                .Update(updateObj);
+
+            AtualizarVinculoFila(userIdAtual, model.USER_ID, model.QUEUEID);
+
+            var usuarioAtualizado = _db.Query("usuarios as us")
+                .LeftJoin("queue_technician as qt", "us.USER_ID", "qt.TECHNICIANID")
+                .LeftJoin("queuedefinition as qdQt", "qt.QUEUEID", "qdQt.QUEUEID")
+                .LeftJoin("queuedefinition as qdUs", "us.QUEUEID", "qdUs.QUEUEID")
+                .Where("us.usr_codigo", id)
+                .Select(
+                    "us.usr_codigo",
+                    "us.USER_ID",
+                    "us.usr_nome",
+                    "us.usr_email",
+                    "us.usr_nivel",
+                    "us.set_codigo"
+                )
+                .SelectRaw("COALESCE(qt.QUEUEID, us.QUEUEID) as QUEUEID")
+                .SelectRaw("COALESCE(qdQt.QUEUENAME, qdUs.QUEUENAME) as setor")
+                .FirstOrDefault<UsuarioListaDTO>();
+
+            return Ok(new
+            {
+                mensagem = "Usuário atualizado com sucesso.",
+                usuario = usuarioAtualizado
+            });
+        }
+
+        [HttpDelete("{id:int}")]
+        public IActionResult Excluir(int id)
+        {
+            if (id <= 0)
+                return BadRequest(new { mensagem = "Código do usuário inválido." });
+
+            var usuario = _db.Query("usuarios")
+                .Where("usr_codigo", id)
+                .Select("usr_codigo", "USER_ID")
+                .FirstOrDefault<dynamic>();
+
+            if (usuario == null)
+                return NotFound(new { mensagem = "Usuário não encontrado." });
+
+            long userId;
+
+            try
+            {
+                userId = (long)usuario.USER_ID;
+            }
+            catch
+            {
+                userId = Convert.ToInt64(usuario.USER_ID);
+            }
+
+            _db.Query("queue_technician")
+                .Where("TECHNICIANID", userId)
+                .Delete();
+
+            _db.Query("usuarios")
+                .Where("usr_codigo", id)
+                .Delete();
+
+            return Ok(new { mensagem = "Usuário excluído com sucesso." });
+        }
+
+        private static string? ValidarCriacao(UsuarioCriarDTO? model)
+        {
+            if (model == null)
+                return "Dados do usuário não informados.";
+
+            if (model.USER_ID <= 0)
+                return "Informe um USER_ID válido.";
+
+            if (string.IsNullOrWhiteSpace(model.usr_nome))
+                return "Informe o nome do usuário.";
+
+            if (string.IsNullOrWhiteSpace(model.usr_email))
+                return "Informe o email do usuário.";
+
+            if (!EmailEhValido(model.usr_email))
+                return "Email inválido.";
+
+            if (string.IsNullOrWhiteSpace(model.usr_nivel))
+                return "Informe o nível do usuário.";
+
+            if (model.set_codigo <= 0)
+                return "Informe um setor (set_codigo) válido.";
+
+            if (string.IsNullOrWhiteSpace(model.Senha) || model.Senha.Trim().Length < 4)
+                return "Informe uma senha válida.";
+
+            return null;
+        }
+
+        private static string? ValidarSalvar(UsuarioSalvarDTO? model, bool exigirSenha)
+        {
+            if (model == null)
+                return "Dados do usuário não informados.";
+
+            if (model.USER_ID <= 0)
+                return "Informe um USER_ID válido.";
+
+            if (string.IsNullOrWhiteSpace(model.usr_nome))
+                return "Informe o nome do usuário.";
+
+            if (string.IsNullOrWhiteSpace(model.usr_email))
+                return "Informe o email do usuário.";
+
+            if (!EmailEhValido(model.usr_email))
+                return "Email inválido.";
+
+            if (string.IsNullOrWhiteSpace(model.usr_nivel))
+                return "Informe o nível do usuário.";
+
+            if (model.set_codigo <= 0)
+                return "Informe um setor (set_codigo) válido.";
+
+            if (exigirSenha)
+            {
+                if (string.IsNullOrWhiteSpace(model.Senha) || model.Senha.Trim().Length < 4)
+                    return "Informe uma senha válida.";
+            }
+            else
+            {
+                if (!string.IsNullOrWhiteSpace(model.Senha) && model.Senha.Trim().Length < 4)
+                    return "Informe uma senha válida.";
+            }
+
+            return null;
+        }
+
+        private void AtualizarVinculoFila(long userIdAntigo, long userIdNovo, long? queueId)
+        {
+            if (userIdAntigo != userIdNovo)
+            {
+                _db.Query("queue_technician")
+                    .Where("TECHNICIANID", userIdAntigo)
+                    .Update(new { TECHNICIANID = userIdNovo });
+            }
+
+            if (!queueId.HasValue)
+                return;
+
+            bool vinculoExiste = _db.Query("queue_technician")
+                .Where("QUEUEID", queueId.Value)
+                .Where("TECHNICIANID", userIdNovo)
+                .Exists();
+
+            if (!vinculoExiste)
+            {
+                _db.Query("queue_technician").Insert(new
+                {
+                    QUEUEID = queueId.Value,
+                    TECHNICIANID = userIdNovo
+                });
+            }
+        }
+
+        private static string NormalizarEmail(string email)
+            => email.Trim().ToLowerInvariant();
+
+        private static bool EmailEhValido(string email)
+        {
+            try
+            {
+                _ = new MailAddress(email.Trim());
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+    }
+}

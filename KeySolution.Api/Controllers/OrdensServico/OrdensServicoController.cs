@@ -4,7 +4,7 @@ using SqlKata;
 using SqlKata.Execution;
 using System.Text.RegularExpressions;
 
-namespace KeySolution.Api.Controllers
+namespace KeySolution.Api.Controllers.OrdensServico
 {
     [ApiController]
     [Route("api/ordens-servico")]
@@ -46,10 +46,6 @@ namespace KeySolution.Api.Controllers
                 return html;
 
             string result = html;
-
-            // Já é absoluto: mantém como está.
-            // src="http://..." ou src="https://..."
-            // src="data:..." também fica intacto porque os padrões abaixo não pegam.
 
             // Caso 1:
             // src="/adventnet/ServiceDesk/inlineimages/WorkOrder/..."

@@ -1,0 +1,334 @@
+﻿using KeySolution.Models;
+using KeySolution.Api.Models.DTOs;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using SqlKata.Execution;
+
+namespace KeySolution.Api.Controllers.Filas
+{
+    [Authorize]
+    [ApiController]
+    [Route("api/filas")]
+    public class FilasController : ControllerBase
+    {
+        private readonly QueryFactory _db;
+
+        public FilasController(QueryFactory db)
+        {
+            _db = db;
+        }
+
+        [HttpGet]
+        public IActionResult Listar([FromQuery] string? tipoBusca, [FromQuery] string? termo)
+        {
+            try
+            {
+                tipoBusca = string.IsNullOrWhiteSpace(tipoBusca) ? "nome" : tipoBusca.Trim().ToLower();
+                termo = string.IsNullOrWhiteSpace(termo) ? string.Empty : termo.Trim();
+
+                var query = _db.Query("queuedefinition as q")
+                    .LeftJoin("queue_technician as qt", "qt.QUEUEID", "q.QUEUEID")
+                    .GroupBy(
+                        "q.QUEUEID",
+                        "q.QUEUENAME",
+                        "q.QUEUEDESCRIPTION",
+                        "q.SITEID",
+                        "q.SENDERNAME",
+                        "q.REPLYADDRESS",
+                        "q.CIID"
+                    );
+
+                if (!string.IsNullOrWhiteSpace(termo))
+                {
+                    if (tipoBusca == "codigo" && long.TryParse(termo, out var codigo))
+                    {
+                        query = query.Where("q.QUEUEID", codigo);
+                    }
+                    else
+                    {
+                        query = query.WhereLike("q.QUEUENAME", $"%{termo}%");
+                    }
+                }
+
+                var lista = query
+                    .OrderBy("q.QUEUENAME")
+                    .Select(
+                        "q.QUEUEID as queueid",
+                        "q.QUEUENAME as queuename",
+                        "q.QUEUEDESCRIPTION as queuedescription",
+                        "q.SITEID as siteid",
+                        "q.SENDERNAME as sendername",
+                        "q.REPLYADDRESS as replyaddress",
+                        "q.CIID as ciid"
+                    )
+                    .SelectRaw("COUNT(qt.QUEUEID) as tecnicosVinculados")
+                    .Get<Fila>()
+                    .ToList();
+
+                return Ok(lista);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    mensagem = "Erro ao listar filas.",
+                    detalhe = ex.Message
+                });
+            }
+        }
+
+        [HttpGet("{id:long}")]
+        public IActionResult ObterPorId(long id)
+        {
+            try
+            {
+                var fila = _db.Query("queuedefinition as q")
+                    .LeftJoin("queue_technician as qt", "qt.QUEUEID", "q.QUEUEID")
+                    .Where("q.QUEUEID", id)
+                    .GroupBy(
+                        "q.QUEUEID",
+                        "q.QUEUENAME",
+                        "q.QUEUEDESCRIPTION",
+                        "q.SITEID",
+                        "q.SENDERNAME",
+                        "q.REPLYADDRESS",
+                        "q.CIID"
+                    )
+                    .Select(
+                        "q.QUEUEID as queueid",
+                        "q.QUEUENAME as queuename",
+                        "q.QUEUEDESCRIPTION as queuedescription",
+                        "q.SITEID as siteid",
+                        "q.SENDERNAME as sendername",
+                        "q.REPLYADDRESS as replyaddress",
+                        "q.CIID as ciid"
+                    )
+                    .SelectRaw("COUNT(qt.QUEUEID) as tecnicosVinculados")
+                    .FirstOrDefault<Fila>();
+
+                if (fila == null)
+                {
+                    return NotFound(new
+                    {
+                        mensagem = "Fila não encontrada."
+                    });
+                }
+
+                return Ok(fila);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    mensagem = "Erro ao consultar fila.",
+                    detalhe = ex.Message
+                });
+            }
+        }
+
+        [HttpPost]
+        public IActionResult Criar([FromBody] FilaSalvarDto model)
+        {
+            try
+            {
+                var validacao = ValidarFila(model);
+
+                if (!string.IsNullOrWhiteSpace(validacao))
+                {
+                    return BadRequest(new
+                    {
+                        mensagem = validacao
+                    });
+                }
+
+                var nextId = _db.Query("queuedefinition")
+                    .SelectRaw("COALESCE(MAX(QUEUEID), 0) + 1 as nextId")
+                    .FirstOrDefault<long>();
+
+                _db.Query("queuedefinition").Insert(new
+                {
+                    QUEUEID = nextId,
+                    QUEUENAME = model.queuename.Trim().ToUpper(),
+                    QUEUEDESCRIPTION = string.IsNullOrWhiteSpace(model.queuedescription) ? null : model.queuedescription.Trim(),
+                    SITEID = model.siteid,
+                    SENDERNAME = string.IsNullOrWhiteSpace(model.sendername) ? null : model.sendername.Trim(),
+                    REPLYADDRESS = string.IsNullOrWhiteSpace(model.replyaddress) ? null : model.replyaddress.Trim(),
+                    CIID = model.ciid
+                });
+
+                var filaCriada = _db.Query("queuedefinition")
+                    .Where("QUEUEID", nextId)
+                    .Select(
+                        "QUEUEID as queueid",
+                        "QUEUENAME as queuename",
+                        "QUEUEDESCRIPTION as queuedescription",
+                        "SITEID as siteid",
+                        "SENDERNAME as sendername",
+                        "REPLYADDRESS as replyaddress",
+                        "CIID as ciid"
+                    )
+                    .FirstOrDefault<Fila>();
+
+                return Ok(new
+                {
+                    mensagem = "Fila cadastrada com sucesso.",
+                    fila = filaCriada
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    mensagem = "Erro ao cadastrar fila.",
+                    detalhe = ex.Message
+                });
+            }
+        }
+
+        [HttpPut("{id:long}")]
+        public IActionResult Atualizar(long id, [FromBody] FilaSalvarDto model)
+        {
+            try
+            {
+                var validacao = ValidarFila(model);
+
+                if (!string.IsNullOrWhiteSpace(validacao))
+                {
+                    return BadRequest(new
+                    {
+                        mensagem = validacao
+                    });
+                }
+
+                var existe = _db.Query("queuedefinition")
+                    .Where("QUEUEID", id)
+                    .Exists();
+
+                if (!existe)
+                {
+                    return NotFound(new
+                    {
+                        mensagem = "Fila não encontrada."
+                    });
+                }
+
+                _db.Query("queuedefinition")
+                    .Where("QUEUEID", id)
+                    .Update(new
+                    {
+                        QUEUENAME = model.queuename.Trim().ToUpper(),
+                        QUEUEDESCRIPTION = string.IsNullOrWhiteSpace(model.queuedescription) ? null : model.queuedescription.Trim(),
+                        SITEID = model.siteid,
+                        SENDERNAME = string.IsNullOrWhiteSpace(model.sendername) ? null : model.sendername.Trim(),
+                        REPLYADDRESS = string.IsNullOrWhiteSpace(model.replyaddress) ? null : model.replyaddress.Trim(),
+                        CIID = model.ciid
+                    });
+
+                var filaAtualizada = _db.Query("queuedefinition")
+                    .Where("QUEUEID", id)
+                    .Select(
+                        "QUEUEID as queueid",
+                        "QUEUENAME as queuename",
+                        "QUEUEDESCRIPTION as queuedescription",
+                        "SITEID as siteid",
+                        "SENDERNAME as sendername",
+                        "REPLYADDRESS as replyaddress",
+                        "CIID as ciid"
+                    )
+                    .FirstOrDefault<Fila>();
+
+                return Ok(new
+                {
+                    mensagem = "Fila atualizada com sucesso.",
+                    fila = filaAtualizada
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    mensagem = "Erro ao atualizar fila.",
+                    detalhe = ex.Message
+                });
+            }
+        }
+
+        [HttpDelete("{id:long}")]
+        public IActionResult Excluir(long id)
+        {
+            try
+            {
+                var existe = _db.Query("queuedefinition")
+                    .Where("QUEUEID", id)
+                    .Exists();
+
+                if (!existe)
+                {
+                    return NotFound(new
+                    {
+                        mensagem = "Fila não encontrada."
+                    });
+                }
+
+                var emUso = _db.Query("queue_technician")
+                    .Where("QUEUEID", id)
+                    .Exists();
+
+                if (emUso)
+                {
+                    return BadRequest(new
+                    {
+                        mensagem = "Esta fila possui técnicos vinculados. Remova os vínculos antes de excluir."
+                    });
+                }
+
+                _db.Query("queuedefinition")
+                    .Where("QUEUEID", id)
+                    .Delete();
+
+                return Ok(new
+                {
+                    mensagem = "Fila excluída com sucesso."
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    mensagem = "Erro ao excluir fila.",
+                    detalhe = ex.Message
+                });
+            }
+        }
+
+        private static string ValidarFila(FilaSalvarDto model)
+        {
+            if (model == null)
+            {
+                return "Dados da fila não informados.";
+            }
+
+            if (string.IsNullOrWhiteSpace(model.queuename))
+            {
+                return "Informe o nome da fila.";
+            }
+
+            if (model.queuename.Trim().Length > 250)
+            {
+                return "O nome da fila não pode ultrapassar 250 caracteres.";
+            }
+
+            if (!string.IsNullOrWhiteSpace(model.replyaddress) && model.replyaddress.Trim().Length > 250)
+            {
+                return "O endereço de resposta não pode ultrapassar 250 caracteres.";
+            }
+
+            if (!string.IsNullOrWhiteSpace(model.sendername) && model.sendername.Trim().Length > 250)
+            {
+                return "O sender name não pode ultrapassar 250 caracteres.";
+            }
+
+            return string.Empty;
+        }
+    }
+}

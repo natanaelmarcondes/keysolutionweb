@@ -1,4 +1,4 @@
-namespace KeySolution.Models.DTO.Auth
+namespace KeySolution.Api.Models.DTO.Auth
 {
     public class LoginRequestDTO
     {
